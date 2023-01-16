@@ -1,0 +1,83 @@
+<html>
+<head>
+<title>models.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cc7832;}
+.s1 { color: #a9b7c6;}
+.s2 { color: #6897bb;}
+.s3 { color: #6a8759;}
+</style>
+</head>
+<body bgcolor="#2b2b2b">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+models.py</font>
+</center></td></tr></table>
+<pre><span class="s0">from </span><span class="s1">market </span><span class="s0">import </span><span class="s1">db</span><span class="s0">, </span><span class="s1">login_manager</span>
+<span class="s0">from </span><span class="s1">market </span><span class="s0">import </span><span class="s1">bcrypt</span>
+<span class="s0">from </span><span class="s1">flask_login </span><span class="s0">import </span><span class="s1">UserMixin</span>
+
+
+<span class="s1">@login_manager.user_loader</span>
+<span class="s0">def </span><span class="s1">load_user(user_id):</span>
+    <span class="s0">return </span><span class="s1">User.query.get(int(user_id))</span>
+
+
+<span class="s0">class </span><span class="s1">User(db.Model</span><span class="s0">, </span><span class="s1">UserMixin):</span>
+    <span class="s1">id = db.Column(db.Integer()</span><span class="s0">, </span><span class="s1">primary_key=</span><span class="s0">True</span><span class="s1">)</span>
+    <span class="s1">username = db.Column(db.String(length=</span><span class="s2">30</span><span class="s1">)</span><span class="s0">, </span><span class="s1">nullable=</span><span class="s0">False, </span><span class="s1">unique=</span><span class="s0">True</span><span class="s1">)</span>
+    <span class="s1">email_address = db.Column(db.String(length=</span><span class="s2">50</span><span class="s1">)</span><span class="s0">, </span><span class="s1">nullable=</span><span class="s0">False, </span><span class="s1">unique=</span><span class="s0">True</span><span class="s1">)</span>
+    <span class="s1">password_hash = db.Column(db.String(length=</span><span class="s2">60</span><span class="s1">)</span><span class="s0">, </span><span class="s1">nullable=</span><span class="s0">False</span><span class="s1">)</span>
+    <span class="s1">budget = db.Column(db.Integer()</span><span class="s0">, </span><span class="s1">nullable=</span><span class="s0">False, </span><span class="s1">default=</span><span class="s2">1000</span><span class="s1">)</span>
+    <span class="s1">items = db.relationship(</span><span class="s3">'Item'</span><span class="s0">, </span><span class="s1">backref=</span><span class="s3">'owned_user'</span><span class="s0">, </span><span class="s1">lazy=</span><span class="s0">True</span><span class="s1">)</span>
+
+    <span class="s1">@property</span>
+    <span class="s0">def </span><span class="s1">prettier_budget(self):</span>
+        <span class="s0">if </span><span class="s1">len(str(self.budget)) &gt;= </span><span class="s2">4</span><span class="s1">:</span>
+            <span class="s0">return </span><span class="s3">f'</span><span class="s0">{</span><span class="s1">str(self.budget)[:-</span><span class="s2">3</span><span class="s1">]</span><span class="s0">}</span><span class="s3">,</span><span class="s0">{</span><span class="s1">str(self.budget)[-</span><span class="s2">3</span><span class="s1">:]</span><span class="s0">}</span><span class="s3">$'</span>
+        <span class="s0">else</span><span class="s1">:</span>
+            <span class="s0">return </span><span class="s3">f&quot;</span><span class="s0">{</span><span class="s1">self.budget</span><span class="s0">}</span><span class="s3">$&quot;</span>
+
+    <span class="s1">@property</span>
+    <span class="s0">def </span><span class="s1">password(self):</span>
+        <span class="s0">return </span><span class="s1">self.password</span>
+
+    <span class="s1">@password.setter</span>
+    <span class="s0">def </span><span class="s1">password(self</span><span class="s0">, </span><span class="s1">plain_text_password):</span>
+        <span class="s1">self.password_hash = bcrypt.generate_password_hash(plain_text_password).decode(</span><span class="s3">'utf-8'</span><span class="s1">)</span>
+
+    <span class="s0">def </span><span class="s1">check_password_correction(self</span><span class="s0">, </span><span class="s1">attempted_password):</span>
+        <span class="s0">return </span><span class="s1">bcrypt.check_password_hash(self.password_hash</span><span class="s0">, </span><span class="s1">attempted_password)</span>
+
+    <span class="s0">def </span><span class="s1">can_purchase(self</span><span class="s0">, </span><span class="s1">item_obj):</span>
+        <span class="s0">return </span><span class="s1">self.budget &gt;= item_obj.price</span>
+
+    <span class="s0">def </span><span class="s1">can_sell(self</span><span class="s0">, </span><span class="s1">item_obj):</span>
+        <span class="s0">return </span><span class="s1">item_obj </span><span class="s0">in </span><span class="s1">self.items</span>
+
+
+<span class="s0">class </span><span class="s1">Item(db.Model):</span>
+    <span class="s1">id = db.Column(db.Integer()</span><span class="s0">, </span><span class="s1">primary_key=</span><span class="s0">True</span><span class="s1">)</span>
+    <span class="s1">name = db.Column(db.String(length=</span><span class="s2">30</span><span class="s1">)</span><span class="s0">, </span><span class="s1">nullable=</span><span class="s0">False, </span><span class="s1">unique=</span><span class="s0">True</span><span class="s1">)</span>
+    <span class="s1">price = db.Column(db.Integer()</span><span class="s0">, </span><span class="s1">nullable=</span><span class="s0">False</span><span class="s1">)</span>
+    <span class="s1">barcode = db.Column(db.String(length=</span><span class="s2">12</span><span class="s1">)</span><span class="s0">, </span><span class="s1">nullable=</span><span class="s0">False, </span><span class="s1">unique=</span><span class="s0">True</span><span class="s1">)</span>
+    <span class="s1">description = db.Column(db.String(length=</span><span class="s2">1024</span><span class="s1">)</span><span class="s0">, </span><span class="s1">nullable=</span><span class="s0">False, </span><span class="s1">unique=</span><span class="s0">True</span><span class="s1">)</span>
+    <span class="s1">owner = db.Column(db.Integer()</span><span class="s0">, </span><span class="s1">db.ForeignKey(</span><span class="s3">'user.id'</span><span class="s1">))</span>
+
+    <span class="s0">def </span><span class="s1">__repr__(self):</span>
+        <span class="s0">return </span><span class="s3">f'Item </span><span class="s0">{</span><span class="s1">self.name</span><span class="s0">}</span><span class="s3">'</span>
+
+    <span class="s0">def </span><span class="s1">buy(self</span><span class="s0">, </span><span class="s1">user):</span>
+        <span class="s1">self.owner = user.id</span>
+        <span class="s1">user.budget -= self.price</span>
+        <span class="s1">db.session.commit()</span>
+
+    <span class="s0">def </span><span class="s1">sell(self</span><span class="s0">, </span><span class="s1">user):</span>
+        <span class="s1">self.owner = </span><span class="s0">None</span>
+        <span class="s1">user.budget += self.price</span>
+        <span class="s1">db.session.commit()</span>
+</pre>
+</body>
+</html>
